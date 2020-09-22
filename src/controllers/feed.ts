@@ -1,53 +1,79 @@
-import { RequestHandler } from "express";
+import { RequestHandler, RequestParamHandler } from "express";
 import { validationResult } from "express-validator";
-export interface PostBody {
-  _id: string;
-  title: string;
-  content: string;
-  imageUrl: string;
-  creator: {
-    name: string;
-  };
-  createdAt: Date;
-}
+import { IError } from "../app";
+
+import Post, { IPost } from "../models/post";
+import { IPostParams, POST_ID } from "../routes/feed";
 
 export const getPosts: RequestHandler = (req, res, next) => {
-  const posts: PostBody[] = [
-    {
-      _id: "1",
-      title: "First Post",
-      content: "This is the first post!!",
-      imageUrl: "images/book.jpg",
-      creator: {
-        name: "farhan",
-      },
-      createdAt: new Date(),
-    },
-  ];
-
-  res.status(200).json({
-    posts,
-  });
+  Post.find()
+    .then((posts: IPost[]) => {
+      res.status(200).json({ message: "Fetched post successfully", posts });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      next(err);
+    });
 };
 
 export const createPost: RequestHandler = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(422).json({
-      message: "Validation is failed, entered correct data",
-      errors: errors.array(),
-    });
+    const error = new Error(
+      "Validation is failed, entered correct data"
+    ) as IError;
+    error.statusCode = 422;
+    throw error;
   }
-  const { title, content } = req.body as PostBody;
-  // Create post in database
-  res.status(201).json({
-    message: "Post created!",
-    post: {
-      _id: new Date().toISOString(),
-      title,
-      content,
-      creator: { name: "farhan" },
-      createdAt: new Date(),
+  const { title, content } = req.body as IPost;
+  const post = new Post({
+    title: title,
+    content,
+    imageUrl: "images/book.jpg",
+    creator: {
+      name: "Farhan",
     },
-  });
+  } as IPost);
+
+  post
+    .save()
+    .then((result) => {
+      // Create post in database
+      res.status(201).json({
+        message: "Post created!",
+        post: result,
+      });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      //for passing error to next error handling middleware
+      next(err); // throwing err from async func will not reach to the next middleware
+    });
+};
+
+export const getPost: RequestHandler = (req, res, next) => {
+  const param: IPostParams = req.params;
+
+  Post.findById(param[POST_ID])
+    .then((post: IPost | null) => {
+      if (!post) {
+        const err = new Error("Could not find post.") as IError;
+        err.statusCode = 404;
+        throw err;
+      }
+      res.status(200).json({ message: "Post fetched", post });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      next(err);
+    });
 };
