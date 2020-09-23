@@ -6,11 +6,15 @@ import Post, { IPost } from "../models/post";
 import { IPostParams, POST_ID } from "../routes/feed";
 
 export const getPosts: RequestHandler = (req, res, next) => {
+  console.log("inside getPosts");
+
   Post.find()
     .then((posts: IPost[]) => {
       res.status(200).json({ message: "Fetched post successfully", posts });
     })
     .catch((err: IError) => {
+      console.log("inside getPosts error");
+
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
@@ -28,11 +32,17 @@ export const createPost: RequestHandler = (req, res, next) => {
     error.statusCode = 422;
     throw error;
   }
+  if (!req.file) {
+    const error = new Error("No image found") as IError;
+    error.statusCode = 422;
+    throw error;
+  }
   const { title, content } = req.body as IPost;
+  const imageUrl = req.file.path.replace("\\", "/");
   const post = new Post({
     title: title,
     content,
-    imageUrl: "images/book.jpg",
+    imageUrl,
     creator: {
       name: "Farhan",
     },
@@ -48,6 +58,7 @@ export const createPost: RequestHandler = (req, res, next) => {
       });
     })
     .catch((err: IError) => {
+      console.log(err);
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
@@ -70,6 +81,8 @@ export const getPost: RequestHandler = (req, res, next) => {
       res.status(200).json({ message: "Post fetched", post });
     })
     .catch((err: IError) => {
+      console.log("inside getPost error");
+
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;

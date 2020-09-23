@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
-
+import multer, { Options } from "multer";
 import feedRoutes from "./routes/feed";
 
 export interface IError extends Error {
@@ -10,14 +10,30 @@ export interface IError extends Error {
 }
 
 const app = express();
+
 const MONGODB_URI =
   "mongodb+srv://farhan:MX5XOhPW8MYkaND1@cluster0.mtvre.mongodb.net/messages?retryWrites=true&w=majority";
 
-// Use for accepting json in req body
-app.use(bodyParser.json());
+//use for uploading files like image, pdf etc
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./src/images");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${new Date().toISOString()}-${file.originalname}`);
+  },
+});
 
-//redirect request to images folder
-app.use("/images", express.static(path.join(__dirname, "images")));
+const fileFilter: Options["fileFilter"] = (req, file, cb) => {
+  if (
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg"
+  ) {
+    cb(null, true);
+  }
+  cb(null, false);
+};
 
 // resolving CORS error
 app.use((req, res, next) => {
@@ -31,7 +47,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Use for accepting json in req body
+app.use(bodyParser.json());
+
+app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
+
+app.use("/src/images", express.static(path.join(__dirname, "images")));
+
 app.use("/feed", feedRoutes);
+
+//redirect request to images folder
 
 app.use(
   (
