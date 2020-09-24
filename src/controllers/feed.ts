@@ -137,6 +137,30 @@ export const updatePost: RequestHandler = (req, res, next) => {
     });
 };
 
+export const deletePost: RequestHandler = (req, res, next) => {
+  const { postId }: IPostParams = req.params;
+  Post.findById(postId)
+    .then((post: IPostDoc | null) => {
+      if (!post) {
+        const err = new Error("Could not find post.") as IError;
+        err.statusCode = 404;
+        throw err;
+      }
+      clearImage(post.imageUrl);
+      return Post.findByIdAndRemove(postId);
+    })
+    .then(() => {
+      res.status(200).json({ message: "Post Deleted" });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
 const clearImage = (filePath: string) => {
   filePath = path.join(__dirname, "../../", filePath);
   fs.unlink(filePath, (err) => console.log(err));
