@@ -65,6 +65,7 @@ app.use(
     res: express.Response,
     next: express.NextFunction
   ) => {
+    console.log(error);
     res.status(error.statusCode).json({ message: error.message });
   }
 );
