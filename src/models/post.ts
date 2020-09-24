@@ -1,4 +1,4 @@
-import { Schema, Document, model, Model } from "mongoose";
+import { Schema, Document, model } from "mongoose";
 
 export interface IPostDoc extends Document {
   title: string;
@@ -21,7 +21,7 @@ export interface IPost {
   updatedAt?: IPostDoc["updatedAt"];
 }
 
-const postSchema: Schema = new Schema(
+const postSchema: Schema<IPostDoc> = new Schema(
   {
     title: {
       type: String,

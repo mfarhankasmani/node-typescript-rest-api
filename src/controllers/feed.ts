@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import e, { RequestHandler } from "express";
+import { RequestHandler } from "express";
 import { validationResult } from "express-validator";
 import { IError } from "../app";
 

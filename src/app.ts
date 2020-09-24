@@ -4,9 +4,12 @@ import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import multer, { Options } from "multer";
 import feedRoutes from "./routes/feed";
+import authRoutes from "./routes/auth";
+import { ValidationError } from "express-validator";
 
 export interface IError extends Error {
   statusCode: number;
+  data?: ValidationError[];
 }
 
 const app = express();
@@ -55,6 +58,7 @@ app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 app.use("/src/images", express.static(path.join(__dirname, "images")));
 
 app.use("/feed", feedRoutes);
+app.use("/auth", authRoutes);
 
 //redirect request to images folder
 
@@ -66,7 +70,9 @@ app.use(
     next: express.NextFunction
   ) => {
     console.log(error);
-    res.status(error.statusCode).json({ message: error.message });
+    res
+      .status(error.statusCode)
+      .json({ message: error.message, data: error.data });
   }
 );
 
