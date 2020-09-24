@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { body } from "express-validator";
 
-import { createPost, getPosts, getPost } from "../controllers/feed";
+import { createPost, getPosts, getPost, updatePost } from "../controllers/feed";
 
 export const POST_ID = "postId";
 export interface IPostParams {
@@ -22,4 +22,14 @@ router.post(
 
 //for singlePost
 router.get(`/post/:${POST_ID}`, getPost);
+
+router.put(
+    `/post/:${POST_ID}`,
+  [
+    body("title").trim().isLength({ min: 5 }),
+    body("content").trim().isLength({ min: 5 }),
+  ],
+  updatePost
+);
+
 export default router;
