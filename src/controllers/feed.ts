@@ -7,7 +7,6 @@ import { IError } from "../app";
 
 import Post, { IPost, IPostDoc } from "../models/post";
 import { IPostParams, POST_ID } from "../routes/feed";
-import { ParsedUrlQuery } from "querystring";
 
 interface IPostQuery {
   page?: number;
@@ -26,7 +25,9 @@ export const getPosts: RequestHandler = (req, res, next) => {
         .limit(perPage);
     })
     .then((posts: IPost[]) => {
-      res.status(200).json({ message: "Fetched post successfully", posts, totalItems });
+      res
+        .status(200)
+        .json({ message: "Fetched post successfully", posts, totalItems });
     })
     .catch((err: IError) => {
       if (!err.statusCode) {

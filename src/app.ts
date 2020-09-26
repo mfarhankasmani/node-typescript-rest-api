@@ -7,6 +7,7 @@ import feedRoutes from "./routes/feed";
 import authRoutes from "./routes/auth";
 import { ValidationError } from "express-validator";
 
+export const CLIENT_SECRET = "SECRETFORUI";
 export interface IError extends Error {
   statusCode: number;
   data?: ValidationError[];

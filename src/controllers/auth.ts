@@ -1,9 +1,10 @@
 import { RequestHandler } from "express";
 import { validationResult } from "express-validator";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-import { IError } from "../app";
-import User, { IUser } from "../models/user";
+import { CLIENT_SECRET, IError } from "../app";
+import User, { IUser, IUserDoc } from "../models/user";
 
 export const signup: RequestHandler = (req, res, next) => {
   const errors = validationResult(req);
@@ -28,6 +29,47 @@ export const signup: RequestHandler = (req, res, next) => {
     })
     .then((result) => {
       res.status(201).json({ message: "User Created!", userId: result._id });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+export const login: RequestHandler = (req, res, next) => {
+  const { email, password }: IUser = req.body;
+  let loadedUser: IUserDoc;
+  User.findOne({ email })
+    .then((user: IUserDoc | null) => {
+      if (!user) {
+        const error = new Error(
+          "User with this email could not be found."
+        ) as IError;
+        error.statusCode = 401;
+        throw error;
+      }
+      loadedUser = user;
+      return bcrypt.compare(password, user.password);
+    })
+    .then((isEqual) => {
+      if (!isEqual) {
+        const error = new Error("Wrong Password") as IError;
+        error.statusCode = 401;
+        throw error;
+      }
+      // generate web token (using jsonwebtoken) once user is authenticated
+      const token = jwt.sign(
+        {
+          email: loadedUser.email,
+          userId: loadedUser._id.toString(),
+        },
+        CLIENT_SECRET, // client secret
+        { expiresIn: "1hr" }
+      );
+      res.status(200).json({ token, userId: loadedUser._id.toString() });
     })
     .catch((err: IError) => {
       if (!err.statusCode) {

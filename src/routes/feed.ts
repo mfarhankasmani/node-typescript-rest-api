@@ -9,6 +9,8 @@ import {
   deletePost,
 } from "../controllers/feed";
 
+import isAuth from "../middleware/is-auth";
+
 export const POST_ID = "postId";
 export interface IPostParams {
   [POST_ID]?: string;
@@ -16,7 +18,7 @@ export interface IPostParams {
 
 const router = Router();
 
-router.get("/posts", getPosts);
+router.get("/posts", isAuth, getPosts);
 router.post(
   "/post",
   [
