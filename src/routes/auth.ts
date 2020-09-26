@@ -2,6 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import User from "../models/user";
 import * as authController from "../controllers/auth";
+import isAuth from "../middleware/is-auth";
 
 const router = Router();
 
@@ -26,5 +27,13 @@ router.put(
 );
 
 router.post("/login", authController.login);
+
+router.get("/status", isAuth, authController.getUserStatus);
+router.patch(
+  "/status",
+  isAuth,
+  [body("status").trim().not().isEmpty()],
+  authController.updateUserStatus
+);
 
 export default router;

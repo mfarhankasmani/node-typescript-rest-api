@@ -1,4 +1,4 @@
-import { Document, model, Schema } from "mongoose";
+import { Document, model, Schema, Types } from "mongoose";
 import { IPostDoc } from "./post";
 
 export interface IUserDoc extends Document {
@@ -6,7 +6,7 @@ export interface IUserDoc extends Document {
   password: string;
   name: string;
   status?: string;
-  posts: IPostDoc["_id"][];
+  posts: Types.Array<IPostDoc["_id"]>;
 }
 
 export interface IUser {

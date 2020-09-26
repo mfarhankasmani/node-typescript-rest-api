@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 
 import { CLIENT_SECRET, IError } from "../app";
 import User, { IUser, IUserDoc } from "../models/user";
+import { ITokenReq } from "../middleware/is-auth";
 
 export const signup: RequestHandler = (req, res, next) => {
   const errors = validationResult(req);
@@ -70,6 +71,49 @@ export const login: RequestHandler = (req, res, next) => {
         { expiresIn: "1hr" }
       );
       res.status(200).json({ token, userId: loadedUser._id.toString() });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+export const getUserStatus: RequestHandler = (req: ITokenReq, res, next) => {
+  User.findById(req.userId)
+    .then((user: IUserDoc | null) => {
+      if (!user) {
+        const error = new Error("User not found") as IError;
+        error.statusCode = 404;
+        throw error;
+      }
+      res.status(200).json({ status: user.status });
+    })
+    .catch((err: IError) => {
+      if (!err.statusCode) {
+        console.log(err);
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+export const updateUserStatus: RequestHandler = (req: ITokenReq, res, next) => {
+  const newStatus = req.body.status;
+  User.findById(req.userId)
+    .then((user: IUserDoc | null) => {
+      if (!user) {
+        const error = new Error("User not found") as IError;
+        error.statusCode = 404;
+        throw error;
+      }
+      user.status = newStatus;
+      return user.save();
+    })
+    .then((result) => {
+      res.status(200).json({ message: "User updated" });
     })
     .catch((err: IError) => {
       if (!err.statusCode) {

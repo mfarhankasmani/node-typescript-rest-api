@@ -9,6 +9,7 @@ import Post, { IPost, IPostDoc } from "../models/post";
 import User, { IUser, IUserDoc } from "../models/user";
 import { IPostParams, POST_ID } from "../routes/feed";
 import { ITokenReq } from "../middleware/is-auth";
+import post from "../models/post";
 
 interface IPostQuery {
   page?: number;
@@ -111,7 +112,7 @@ export const getPost: RequestHandler = (req, res, next) => {
     });
 };
 
-export const updatePost: RequestHandler = (req, res, next) => {
+export const updatePost: RequestHandler = (req: ITokenReq, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = new Error(
@@ -141,6 +142,11 @@ export const updatePost: RequestHandler = (req, res, next) => {
         err.statusCode = 404;
         throw err;
       }
+      if (post.creator.toString() !== req.userId) {
+        const err = new Error("User is not authorized") as IError;
+        err.statusCode = 403;
+        throw err;
+      }
       if (imageUrl !== post.imageUrl) {
         clearImage(post.imageUrl);
       }
@@ -161,7 +167,7 @@ export const updatePost: RequestHandler = (req, res, next) => {
     });
 };
 
-export const deletePost: RequestHandler = (req, res, next) => {
+export const deletePost: RequestHandler = (req: ITokenReq, res, next) => {
   const { postId }: IPostParams = req.params;
   Post.findById(postId)
     .then((post: IPostDoc | null) => {
@@ -170,8 +176,21 @@ export const deletePost: RequestHandler = (req, res, next) => {
         err.statusCode = 404;
         throw err;
       }
+      if (post.creator.toString() !== req.userId) {
+        const err = new Error("User is not authorized") as IError;
+        err.statusCode = 403;
+        throw err;
+      }
       clearImage(post.imageUrl);
       return Post.findByIdAndRemove(postId);
+    })
+    .then(() => {
+      return User.findById(req.userId);
+    })
+    .then((user: IUserDoc | null) => {
+        // mongoose method for deleting value from the array
+      user?.posts.pull(postId);
+      return user?.save();
     })
     .then(() => {
       res.status(200).json({ message: "Post Deleted" });
