@@ -5,42 +5,37 @@ import { RequestHandler } from "express";
 import { validationResult } from "express-validator";
 import { IError } from "../app";
 
-import Post, { IPost, IPostDoc } from "../models/post";
-import User, { IUser, IUserDoc } from "../models/user";
+import Post, { IPost } from "../models/post";
+import User from "../models/user";
 import { IPostParams, POST_ID } from "../routes/feed";
 import { ITokenReq } from "../middleware/is-auth";
-import post from "../models/post";
 
 interface IPostQuery {
   page?: number;
 }
 
-export const getPosts: RequestHandler = (req, res, next) => {
+export const getPosts: RequestHandler = async (req, res, next) => {
   const { page = 1 }: IPostQuery = req.query;
   const perPage = 2;
-  let totalItems: number;
-  Post.find()
-    .countDocuments()
-    .then((count) => {
-      totalItems = count;
-      return Post.find()
-        .skip((page - 1) * perPage)
-        .limit(perPage);
-    })
-    .then((posts: IPost[]) => {
-      res
-        .status(200)
-        .json({ message: "Fetched post successfully", posts, totalItems });
-    })
-    .catch((err: IError) => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
-    });
+
+  try {
+    const totalItems = await Post.find().countDocuments();
+    const posts = await Post.find()
+      .populate("creator")
+      .skip((page - 1) * perPage)
+      .limit(perPage);
+    res
+      .status(200)
+      .json({ message: "Fetched post successfully", posts, totalItems });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
-export const createPost: RequestHandler = (req: ITokenReq, res, next) => {
+export const createPost: RequestHandler = async (req: ITokenReq, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = new Error(
@@ -64,55 +59,51 @@ export const createPost: RequestHandler = (req: ITokenReq, res, next) => {
     creator: req.userId,
   } as IPost);
 
-  post
-    .save()
-    .then(() => {
-      return User.findById(req.userId);
-    })
-    .then((user: IUserDoc | null) => {
-      user?.posts.push(post);
-      return user?.save();
-    })
-    .then((result) => {
-      // Create post in database
-      res.status(201).json({
-        message: "Post created!",
-        post,
-        creator: { _id: result?._id.toString(), name: result?.name },
-      });
-    })
-    .catch((err: IError) => {
+  try {
+    await post.save();
+    const user = await User.findById(req.userId);
+    user?.posts.push(post);
+    await user?.save();
+
+    // Create post in database
+    res.status(201).json({
+      message: "Post created!",
+      post,
+      creator: { _id: user?._id.toString(), name: user?.name },
+    });
+  } catch {
+    (err: IError) => {
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
       }
       //for passing error to next error handling middleware
       next(err); // throwing err from async func will not reach to the next middleware
-    });
+    };
+  }
 };
 
-export const getPost: RequestHandler = (req, res, next) => {
+export const getPost: RequestHandler = async (req, res, next) => {
   const param: IPostParams = req.params;
 
-  Post.findById(param[POST_ID])
-    .then((post: IPost | null) => {
-      if (!post) {
-        const err = new Error("Could not find post.") as IError;
-        err.statusCode = 404;
-        throw err;
-      }
-      res.status(200).json({ message: "Post fetched", post });
-    })
-    .catch((err: IError) => {
-      if (!err.statusCode) {
-        console.log(err);
-        err.statusCode = 500;
-      }
-      next(err);
-    });
+  try {
+    const post = await Post.findById(param[POST_ID]);
+    if (!post) {
+      const err = new Error("Could not find post.") as IError;
+      err.statusCode = 404;
+      throw err;
+    }
+    res.status(200).json({ message: "Post fetched", post });
+  } catch (err) {
+    if (!err.statusCode) {
+      console.log(err);
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
 
-export const updatePost: RequestHandler = (req: ITokenReq, res, next) => {
+export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = new Error(
@@ -134,74 +125,73 @@ export const updatePost: RequestHandler = (req: ITokenReq, res, next) => {
     error.statusCode = 422;
     throw error;
   }
+  try {
+    const post = await Post.findById(postId);
 
-  Post.findById(postId)
-    .then((post: IPostDoc | null) => {
-      if (!post) {
-        const err = new Error("Could not find post.") as IError;
-        err.statusCode = 404;
-        throw err;
-      }
-      if (post.creator.toString() !== req.userId) {
-        const err = new Error("User is not authorized") as IError;
-        err.statusCode = 403;
-        throw err;
-      }
-      if (imageUrl !== post.imageUrl) {
-        clearImage(post.imageUrl);
-      }
-      post.title = title;
-      post.content = content;
-      post.imageUrl = imageUrl;
-      return post.save();
-    })
-    .then((updatedPost) => {
-      res.status(200).json({ message: "Post Updated!", post: updatedPost });
-    })
-    .catch((err: IError) => {
+    if (!post) {
+      const err = new Error("Could not find post.") as IError;
+      err.statusCode = 404;
+      throw err;
+    }
+    if (post.creator.toString() !== req.userId) {
+      const err = new Error("User is not authorized") as IError;
+      err.statusCode = 403;
+      throw err;
+    }
+    if (imageUrl !== post?.imageUrl) {
+      clearImage(post.imageUrl);
+    }
+
+    post.title = title;
+    post.content = content;
+    post.imageUrl = imageUrl;
+
+    await post.save();
+    res.status(200).json({ message: "Post Updated!", post });
+  } catch {
+    (err: IError) => {
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
       }
       next(err);
-    });
+    };
+  }
 };
 
-export const deletePost: RequestHandler = (req: ITokenReq, res, next) => {
+export const deletePost: RequestHandler = async (req: ITokenReq, res, next) => {
   const { postId }: IPostParams = req.params;
-  Post.findById(postId)
-    .then((post: IPostDoc | null) => {
-      if (!post) {
-        const err = new Error("Could not find post.") as IError;
-        err.statusCode = 404;
-        throw err;
-      }
-      if (post.creator.toString() !== req.userId) {
-        const err = new Error("User is not authorized") as IError;
-        err.statusCode = 403;
-        throw err;
-      }
-      clearImage(post.imageUrl);
-      return Post.findByIdAndRemove(postId);
-    })
-    .then(() => {
-      return User.findById(req.userId);
-    })
-    .then((user: IUserDoc | null) => {
-        // mongoose method for deleting value from the array
-      user?.posts.pull(postId);
-      return user?.save();
-    })
-    .then(() => {
-      res.status(200).json({ message: "Post Deleted" });
-    })
-    .catch((err: IError) => {
+  try {
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      const err = new Error("Could not find post.") as IError;
+      err.statusCode = 404;
+      throw err;
+    }
+    if (post.creator.toString() !== req.userId) {
+      const err = new Error("User is not authorized") as IError;
+      err.statusCode = 403;
+      throw err;
+    }
+    clearImage(post.imageUrl);
+    await Post.findByIdAndRemove(postId);
+    const user = await User.findById(req.userId);
+
+    // mongoose method for deleting value from the array
+    user?.posts.pull(postId);
+    await user?.save();
+
+    res.status(200).json({ message: "Post Deleted" });
+  } catch {
+    (err: IError) => {
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
       }
       next(err);
-    });
+    };
+  }
 };
 
 const clearImage = (filePath: string) => {
