@@ -19,8 +19,10 @@ export interface IPostParams {
 const router = Router();
 
 router.get("/posts", isAuth, getPosts);
+
 router.post(
   "/post",
+  isAuth,
   [
     body("title").trim().isLength({ min: 5 }),
     body("content").trim().isLength({ min: 5 }),
@@ -29,10 +31,11 @@ router.post(
 );
 
 //for singlePost
-router.get(`/post/:${POST_ID}`, getPost);
+router.get(`/post/:${POST_ID}`, isAuth, getPost);
 
 router.put(
   `/post/:${POST_ID}`,
+  isAuth,
   [
     body("title").trim().isLength({ min: 5 }),
     body("content").trim().isLength({ min: 5 }),
@@ -40,5 +43,5 @@ router.put(
   updatePost
 );
 
-router.delete(`/post/:${POST_ID}`, deletePost);
+router.delete(`/post/:${POST_ID}`, isAuth, deletePost);
 export default router;

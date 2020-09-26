@@ -1,12 +1,11 @@
 import { Schema, Document, model } from "mongoose";
+import { IUserDoc } from "./user";
 
 export interface IPostDoc extends Document {
   title: string;
   content: string;
   imageUrl: string;
-  creator: {
-    name: string;
-  };
+  creator: IUserDoc["_id"];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,7 +35,8 @@ const postSchema: Schema<IPostDoc> = new Schema(
       required: true,
     },
     creator: {
-      type: Object,
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
   },

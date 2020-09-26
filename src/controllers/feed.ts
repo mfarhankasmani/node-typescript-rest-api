@@ -6,7 +6,9 @@ import { validationResult } from "express-validator";
 import { IError } from "../app";
 
 import Post, { IPost, IPostDoc } from "../models/post";
+import User, { IUser, IUserDoc } from "../models/user";
 import { IPostParams, POST_ID } from "../routes/feed";
+import { ITokenReq } from "../middleware/is-auth";
 
 interface IPostQuery {
   page?: number;
@@ -37,7 +39,7 @@ export const getPosts: RequestHandler = (req, res, next) => {
     });
 };
 
-export const createPost: RequestHandler = (req, res, next) => {
+export const createPost: RequestHandler = (req: ITokenReq, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = new Error(
@@ -53,22 +55,29 @@ export const createPost: RequestHandler = (req, res, next) => {
   }
   const { title, content } = req.body as IPost;
   const imageUrl = req.file.path.replace("\\", "/");
+
   const post = new Post({
     title: title,
     content,
     imageUrl,
-    creator: {
-      name: "Farhan",
-    },
+    creator: req.userId,
   } as IPost);
 
   post
     .save()
+    .then(() => {
+      return User.findById(req.userId);
+    })
+    .then((user: IUserDoc | null) => {
+      user?.posts.push(post);
+      return user?.save();
+    })
     .then((result) => {
       // Create post in database
       res.status(201).json({
         message: "Post created!",
-        post: result,
+        post,
+        creator: { _id: result?._id.toString(), name: result?.name },
       });
     })
     .catch((err: IError) => {
