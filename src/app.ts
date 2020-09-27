@@ -3,6 +3,8 @@ import path from "path";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import multer, { Options } from "multer";
+import { init } from "./socket";
+
 import feedRoutes from "./routes/feed";
 import authRoutes from "./routes/auth";
 import { ValidationError } from "express-validator";
@@ -79,5 +81,10 @@ app.use(
 
 mongoose
   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
-  .then(() => app.listen(8080))
+  .then(() => {
+    const server = app.listen(8080);
+    init(server).on("connection", (client) => {
+      console.log("Client Connected");
+    });
+  })
   .catch((err) => console.log(err));
