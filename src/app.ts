@@ -3,11 +3,11 @@ import path from "path";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import multer, { Options } from "multer";
-import { init } from "./socket";
-
-import feedRoutes from "./routes/feed";
-import authRoutes from "./routes/auth";
+import { graphqlHTTP } from "express-graphql";
 import { ValidationError } from "express-validator";
+
+import resolvers from "./graphql/resolvers";
+import schema from "./graphql/schema";
 
 export const CLIENT_SECRET = "SECRETFORUI";
 export interface IError extends Error {
@@ -53,17 +53,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Use for accepting json in req body
 app.use(bodyParser.json());
 
 app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 
 app.use("/src/images", express.static(path.join(__dirname, "images")));
 
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
-
-//redirect request to images folder
+app.use(
+  "/graphql",
+  graphqlHTTP({
+    schema,
+    rootValue: resolvers,
+  })
+);
 
 app.use(
   (
@@ -82,9 +84,6 @@ app.use(
 mongoose
   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
   .then(() => {
-    const server = app.listen(8080);
-    init(server).on("connection", (client) => {
-      console.log("Client Connected");
-    });
+    app.listen(8080);
   })
   .catch((err) => console.log(err));

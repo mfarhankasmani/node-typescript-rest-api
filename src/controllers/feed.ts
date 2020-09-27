@@ -7,12 +7,15 @@ import { IError } from "../app";
 
 import Post, { IPost } from "../models/post";
 import User from "../models/user";
-import { IPostParams, POST_ID } from "../routes/feed";
 import { ITokenReq } from "../middleware/is-auth";
-import { getIO } from "../socket";
 
 interface IPostQuery {
   page?: number;
+}
+
+export const POST_ID = "postId";
+export interface IPostParams {
+  [POST_ID]?: string;
 }
 
 export const getPosts: RequestHandler = async (req, res, next) => {
@@ -66,12 +69,6 @@ export const createPost: RequestHandler = async (req: ITokenReq, res, next) => {
     const user = await User.findById(req.userId);
     user?.posts.push(post);
     await user?.save();
-
-    // Emitting message/data to all the connected clients to channel "posts"
-    getIO().emit("posts", {
-      action: "create",
-      post: { ...post._doc, creator: { _id: req.userId, name: user?.name } },
-    });
 
     // Create post in database
     res.status(201).json({
@@ -155,10 +152,7 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
     post.imageUrl = imageUrl;
 
     await post.save();
-    getIO().emit("posts", {
-      action: "update",
-      post,
-    });
+
     res.status(200).json({ message: "Post Updated!", post });
   } catch {
     (err: IError) => {
@@ -194,7 +188,6 @@ export const deletePost: RequestHandler = async (req: ITokenReq, res, next) => {
     user?.posts.pull(postId);
     await user?.save();
 
-    getIO().emit("posts", { action: "delete", post: postId });
     res.status(200).json({ message: "Post Deleted" });
   } catch {
     (err: IError) => {
