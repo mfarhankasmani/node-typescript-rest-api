@@ -3,7 +3,7 @@ import path from "path";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import multer, { Options } from "multer";
-import io from "socket.io";
+import { init } from "./socket";
 
 import feedRoutes from "./routes/feed";
 import authRoutes from "./routes/auth";
@@ -83,8 +83,7 @@ mongoose
   .connect(MONGODB_URI, { useUnifiedTopology: true, useNewUrlParser: true })
   .then(() => {
     const server = app.listen(8080);
-    const socket = io(server);
-    socket.on("connection", socket => {
+    init(server).on("connection", (client) => {
       console.log("Client Connected");
     });
   })

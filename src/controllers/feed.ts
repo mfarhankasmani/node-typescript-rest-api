@@ -9,6 +9,7 @@ import Post, { IPost } from "../models/post";
 import User from "../models/user";
 import { IPostParams, POST_ID } from "../routes/feed";
 import { ITokenReq } from "../middleware/is-auth";
+import { getIO } from "../socket";
 
 interface IPostQuery {
   page?: number;
@@ -22,6 +23,7 @@ export const getPosts: RequestHandler = async (req, res, next) => {
     const totalItems = await Post.find().countDocuments();
     const posts = await Post.find()
       .populate("creator")
+      .sort({ createdAt: -1 })
       .skip((page - 1) * perPage)
       .limit(perPage);
     res
@@ -64,6 +66,12 @@ export const createPost: RequestHandler = async (req: ITokenReq, res, next) => {
     const user = await User.findById(req.userId);
     user?.posts.push(post);
     await user?.save();
+
+    // Emitting message/data to all the connected clients to channel "posts"
+    getIO().emit("posts", {
+      action: "create",
+      post: { ...post._doc, creator: { _id: req.userId, name: user?.name } },
+    });
 
     // Create post in database
     res.status(201).json({
@@ -126,14 +134,14 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
     throw error;
   }
   try {
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate("creator");
 
     if (!post) {
       const err = new Error("Could not find post.") as IError;
       err.statusCode = 404;
       throw err;
     }
-    if (post.creator.toString() !== req.userId) {
+    if (post.creator._id.toString() !== req.userId) {
       const err = new Error("User is not authorized") as IError;
       err.statusCode = 403;
       throw err;
@@ -147,6 +155,10 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
     post.imageUrl = imageUrl;
 
     await post.save();
+    getIO().emit("posts", {
+      action: "update",
+      post,
+    });
     res.status(200).json({ message: "Post Updated!", post });
   } catch {
     (err: IError) => {
@@ -182,6 +194,7 @@ export const deletePost: RequestHandler = async (req: ITokenReq, res, next) => {
     user?.posts.pull(postId);
     await user?.save();
 
+    getIO().emit("posts", { action: "delete", post: postId });
     res.status(200).json({ message: "Post Deleted" });
   } catch {
     (err: IError) => {

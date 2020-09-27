@@ -8,6 +8,7 @@ export interface IPostDoc extends Document {
   creator: IUserDoc["_id"];
   createdAt: Date;
   updatedAt: Date;
+  _doc: IPost;
 }
 
 export interface IPost {
