@@ -8,12 +8,10 @@ import { ValidationError } from "express-validator";
 
 import resolvers from "./graphql/resolvers";
 import schema from "./graphql/schema";
+import { IError } from "./validation";
 
 export const CLIENT_SECRET = "SECRETFORUI";
-export interface IError extends Error {
-  statusCode: number;
-  data?: ValidationError[];
-}
+
 
 const app = express();
 
@@ -65,7 +63,15 @@ app.use(
   graphqlHTTP({
     schema,
     rootValue: resolvers,
-    graphiql: true // provides graphQL tool on get request from browser, it needs query defined for it to work
+    graphiql: true, // provides graphQL tool on get request from browser, it needs query defined for it to work
+    customFormatErrorFn(err) {
+      if (!err.originalError) {
+        return err;
+      }
+      const { code, data } = err.originalError as IError;
+      const message = err.message || "An error occurred.";
+      return { message, data, status: code };
+    },
   })
 );
 
@@ -77,9 +83,7 @@ app.use(
     next: express.NextFunction
   ) => {
     console.log(error);
-    res
-      .status(error.statusCode)
-      .json({ message: error.message, data: error.data });
+    res.status(error.code).json({ message: error.message, data: error.data });
   }
 );
 

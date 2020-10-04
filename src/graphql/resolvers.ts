@@ -10,7 +10,7 @@
 
 import User, { IUserDoc, IUser } from "../models/user";
 import bcrypt from "bcryptjs";
-import { validation } from "../validation";
+import { validateUserInput } from "../validation";
 
 interface userInputArgs {
   userInput: userInput;
@@ -26,12 +26,7 @@ const resolver = {
     { userInput: { email, password, name } }: userInputArgs,
     req: Request
   ) => {
-    const errors = validation({ email, password });
-
-    if (errors.length > 0) {
-      const error = new Error("Invalid Inputs.");
-      throw error;
-    }
+    validateUserInput({ email, password });
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {

@@ -9,10 +9,19 @@ interface IValidation {
   password?: string;
 }
 
-export const validation = ({
-  email,
-  password,
-}: IValidation): IValidationError[] => {
+export interface IError extends Error {
+  data?: IValidationError[];
+  code: number;
+}
+
+export const validateUserInput = (args: IValidation): void => {
+  const errors = validate(args);
+  if (errors.length > 0) {
+    throw errorObj("Invalid Input.", errors, 422);
+  }
+};
+
+export const validate = ({ email, password }: IValidation) => {
   const errors: IValidationError[] = [];
   if (email && !validator.isEmail(email)) {
     errors.push({ message: "E-mail is invalid" });
@@ -26,4 +35,15 @@ export const validation = ({
     }
   }
   return errors;
+};
+
+const errorObj = (
+  message: string,
+  errors: IValidationError[],
+  code: number
+): IError => {
+  const err = new Error(message) as IError;
+  err.data = errors;
+  err.code = code;
+  return err;
 };
