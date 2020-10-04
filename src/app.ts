@@ -12,7 +12,6 @@ import { IError } from "./validation";
 
 export const CLIENT_SECRET = "SECRETFORUI";
 
-
 const app = express();
 
 const MONGODB_URI =
@@ -48,6 +47,10 @@ app.use((req, res, next) => {
   );
   //Allows user to set content type on client side
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // fix required for option error on graphql
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
   next();
 });
 

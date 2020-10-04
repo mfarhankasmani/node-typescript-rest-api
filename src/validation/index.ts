@@ -17,7 +17,7 @@ export interface IError extends Error {
 export const validateUserInput = (args: IValidation): void => {
   const errors = validate(args);
   if (errors.length > 0) {
-    throw errorObj("Invalid Input.", errors, 422);
+    errorObj("Invalid Input.", 422, errors);
   }
 };
 
@@ -37,13 +37,13 @@ export const validate = ({ email, password }: IValidation) => {
   return errors;
 };
 
-const errorObj = (
+export const errorObj = (
   message: string,
-  errors: IValidationError[],
-  code: number
+  code: number,
+  errors?: IValidationError[],
 ): IError => {
   const err = new Error(message) as IError;
   err.data = errors;
   err.code = code;
-  return err;
+  throw err;
 };
