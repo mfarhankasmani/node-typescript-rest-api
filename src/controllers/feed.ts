@@ -3,11 +3,10 @@ import path from "path";
 
 import { RequestHandler } from "express";
 import { validationResult } from "express-validator";
-import { IError } from "../app";
 
 import Post, { IPost } from "../models/post";
 import User from "../models/user";
-import { ITokenReq } from "../middleware/is-auth";
+import { ITokenReq } from "../middleware/auth";
 
 interface IPostQuery {
   page?: number;
@@ -45,12 +44,12 @@ export const createPost: RequestHandler = async (req: ITokenReq, res, next) => {
   if (!errors.isEmpty()) {
     const error = new Error(
       "Validation is failed, entered correct data"
-    ) as IError;
+    ) as any;
     error.statusCode = 422;
     throw error;
   }
   if (!req.file) {
-    const error = new Error("No image found") as IError;
+    const error = new Error("No image found") as any;
     error.statusCode = 422;
     throw error;
   }
@@ -77,7 +76,7 @@ export const createPost: RequestHandler = async (req: ITokenReq, res, next) => {
       creator: { _id: user?._id.toString(), name: user?.name },
     });
   } catch {
-    (err: IError) => {
+    (err: any) => {
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
@@ -94,7 +93,7 @@ export const getPost: RequestHandler = async (req, res, next) => {
   try {
     const post = await Post.findById(param[POST_ID]);
     if (!post) {
-      const err = new Error("Could not find post.") as IError;
+      const err = new Error("Could not find post.") as any;
       err.statusCode = 404;
       throw err;
     }
@@ -113,7 +112,7 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
   if (!errors.isEmpty()) {
     const error = new Error(
       "Validation is failed, entered correct data"
-    ) as IError;
+    ) as any;
     error.statusCode = 422;
     throw error;
   }
@@ -126,7 +125,7 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
     imageUrl = req.file.path.replace("\\", "/");
   }
   if (!imageUrl) {
-    const error = new Error("No file picked.") as IError;
+    const error = new Error("No file picked.") as any;
     error.statusCode = 422;
     throw error;
   }
@@ -134,12 +133,12 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
     const post = await Post.findById(postId).populate("creator");
 
     if (!post) {
-      const err = new Error("Could not find post.") as IError;
+      const err = new Error("Could not find post.") as any;
       err.statusCode = 404;
       throw err;
     }
     if (post.creator._id.toString() !== req.userId) {
-      const err = new Error("User is not authorized") as IError;
+      const err = new Error("User is not authorized") as any;
       err.statusCode = 403;
       throw err;
     }
@@ -155,7 +154,7 @@ export const updatePost: RequestHandler = async (req: ITokenReq, res, next) => {
 
     res.status(200).json({ message: "Post Updated!", post });
   } catch {
-    (err: IError) => {
+    (err: any) => {
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;
@@ -171,12 +170,12 @@ export const deletePost: RequestHandler = async (req: ITokenReq, res, next) => {
     const post = await Post.findById(postId);
 
     if (!post) {
-      const err = new Error("Could not find post.") as IError;
+      const err = new Error("Could not find post.") as any;
       err.statusCode = 404;
       throw err;
     }
     if (post.creator.toString() !== req.userId) {
-      const err = new Error("User is not authorized") as IError;
+      const err = new Error("User is not authorized") as any;
       err.statusCode = 403;
       throw err;
     }
@@ -190,7 +189,7 @@ export const deletePost: RequestHandler = async (req: ITokenReq, res, next) => {
 
     res.status(200).json({ message: "Post Deleted" });
   } catch {
-    (err: IError) => {
+    (err: any) => {
       if (!err.statusCode) {
         console.log(err);
         err.statusCode = 500;

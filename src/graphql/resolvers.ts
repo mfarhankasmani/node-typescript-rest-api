@@ -1,33 +1,40 @@
 import User, { IUserDoc, IUser } from "../models/user";
+import Post, { IPost, IPostDoc } from "../models/post";
 import bcrypt from "bcryptjs";
-import { IError, validateUserInput, errorObj } from "../validation";
+import { validateUserInput, errorObj, validatePostInput } from "../validation";
 import jwt from "jsonwebtoken";
 import { CLIENT_SECRET } from "../app";
 
-interface IUserInputArgs {
-  userInput: IUserInput;
-}
-interface IUserInput extends ILoginInput {
-  name: string;
-}
+import {
+  IUserInputArgs,
+  ILoginInput,
+  IPostInputData,
+  IFindUser,
+} from "./types";
+import { Request } from "express";
+import { ITokenReq } from "../middleware/auth";
 
-interface ILoginInput {
-  email: string;
-  password: string;
-}
+const findUser = async ({
+  existingUser = false,
+  email,
+  id,
+}: IFindUser): Promise<IUserDoc | null> => {
+  let user;
 
-const findUserByEmail = async (
-  email: string,
-  existingUser: boolean = false
-): Promise<IUserDoc | null> => {
-  const user = await User.findOne({ email });
+  if (email) {
+    user = await User.findOne({ email });
+  } else if (id) {
+    user = await User.findById(id);
+  } else {
+    return null;
+  }
 
   if (existingUser && user) {
     errorObj("User exists already", 404);
   }
 
   if (!existingUser && !user) {
-    errorObj("User does not exist", 401);
+    errorObj("Invalid User", 401);
   }
 
   return user;
@@ -44,13 +51,22 @@ const createToken = (user: IUserDoc): string => {
   );
 };
 
+const gqlPost = (post: IPostDoc) => {
+  return {
+    ...post._doc,
+    _id: post._id.toString(),
+    createdAt: post.createdAt.toISOString(),
+    updatedAt: post.updatedAt.toISOString(),
+  };
+};
+
 const resolver = {
   createUser: async (
     { userInput: { email, password, name } }: IUserInputArgs,
     req: Request
   ) => {
     validateUserInput({ email, password });
-    await findUserByEmail(email, true);
+    await findUser({ existingUser: true, email });
     const hashedPw = await bcrypt.hash(password, 12);
     const user: IUserDoc = new User({
       email,
@@ -62,12 +78,33 @@ const resolver = {
   },
 
   login: async ({ email, password }: ILoginInput) => {
-    const user = await findUserByEmail(email);
+    const user = await findUser({ email });
     if (user) {
       const isEqual = await bcrypt.compare(password, user.password);
       !isEqual && errorObj("Password is incorrect.", 401);
       const token = createToken(user);
       return { token, userId: user._id.toString() };
+    }
+  },
+
+  creatPost: async (
+    { postInput: { title, content, imageUrl } }: IPostInputData,
+    req: ITokenReq
+  ) => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    validatePostInput({ title, content });
+    const user = await findUser({ id: req.userId });
+    if (user) {
+      const post = new Post({
+        title,
+        content,
+        imageUrl,
+        creator: user,
+      } as IPost);
+      const createdPost = await post.save();
+      user.posts.push(createdPost);
+      await user.save()
+      return gqlPost(createdPost);
     }
   },
 };

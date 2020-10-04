@@ -4,11 +4,11 @@ import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import multer, { Options } from "multer";
 import { graphqlHTTP } from "express-graphql";
-import { ValidationError } from "express-validator";
 
 import resolvers from "./graphql/resolvers";
 import schema from "./graphql/schema";
 import { IError } from "./validation";
+import auth from "./middleware/auth";
 
 export const CLIENT_SECRET = "SECRETFORUI";
 
@@ -59,6 +59,8 @@ app.use(bodyParser.json());
 app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 
 app.use("/src/images", express.static(path.join(__dirname, "images")));
+
+app.use(auth);
 
 // add graphQL middleware - one route for all the routes
 app.use(

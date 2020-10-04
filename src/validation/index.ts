@@ -1,3 +1,4 @@
+import { title } from "process";
 import validator from "validator";
 
 interface IValidationError {
@@ -7,6 +8,9 @@ interface IValidationError {
 interface IValidation {
   email?: string;
   password?: string;
+  title?: string;
+  content?: string;
+  imageUrl?: string;
 }
 
 export interface IError extends Error {
@@ -21,7 +25,14 @@ export const validateUserInput = (args: IValidation): void => {
   }
 };
 
-export const validate = ({ email, password }: IValidation) => {
+export const validatePostInput = (args: IValidation): void => {
+  const errors = validate(args);
+  if (errors.length > 0) {
+    errorObj("Invalid Post.", 422, errors);
+  }
+};
+
+export const validate = ({ email, password, title, content }: IValidation) => {
   const errors: IValidationError[] = [];
   if (email && !validator.isEmail(email)) {
     errors.push({ message: "E-mail is invalid" });
@@ -34,13 +45,26 @@ export const validate = ({ email, password }: IValidation) => {
       errors.push({ message: "Password is too short" });
     }
   }
+  if (title) {
+    if (validator.isEmpty(title) || !validator.isLength(title, { min: 5 })) {
+      errors.push({ message: "Title is invalid" });
+    }
+  }
+  if (content) {
+    if (
+      validator.isEmpty(content) ||
+      !validator.isLength(content, { min: 5 })
+    ) {
+      errors.push({ message: "Content is invalid" });
+    }
+  }
   return errors;
 };
 
 export const errorObj = (
   message: string,
   code: number,
-  errors?: IValidationError[],
+  errors?: IValidationError[]
 ): IError => {
   const err = new Error(message) as IError;
   err.data = errors;
