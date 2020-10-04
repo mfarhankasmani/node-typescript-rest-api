@@ -59,6 +59,7 @@ app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 
 app.use("/src/images", express.static(path.join(__dirname, "images")));
 
+// add graphQL middleware
 app.use(
   "/graphql",
   graphqlHTTP({

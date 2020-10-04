@@ -1,17 +1,20 @@
-import { buildSchema } from "graphql";
+import { buildSchema, Source } from "graphql";
 
-const schema = buildSchema(`
-    type TestData {
-        text: String!
-        views: Int!
-    }
-    type RootQuery {
-        hello: TestData!
-    }
+const source = new Source(`
+  type TestData {
+    text: String!
+    views: Int!
+}
 
-    schema {
-        query: RootQuery
-    }
+type RootQuery {
+    hello: TestData!
+}
+
+schema {
+    query: RootQuery
+}
 `);
+
+const schema = buildSchema(source);
 
 export default schema;
