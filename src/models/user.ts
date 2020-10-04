@@ -7,6 +7,7 @@ export interface IUserDoc extends Document {
   name: string;
   status?: string;
   posts: Types.Array<IPostDoc["_id"]>;
+  _doc: IUser;
 }
 
 export interface IUser {

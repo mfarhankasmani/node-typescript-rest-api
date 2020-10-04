@@ -65,6 +65,7 @@ app.use(
   graphqlHTTP({
     schema,
     rootValue: resolvers,
+    graphiql: true // provides graphQL tool on get request from browser, it needs query defined for it to work
   })
 );
 
