@@ -58,7 +58,7 @@ const resolver = {
   posts: async ({ page = 1 }, req: ITokenReq): Promise<PostData> => {
     !req.isAuth && errorObj("Not authenticated", 401);
     const totalPosts = await Post.find().countDocuments();
-    
+
     const perPage = 2;
     const posts = await Post.find()
       .sort({ createdAt: -1 })
@@ -68,16 +68,28 @@ const resolver = {
 
     return {
       posts: posts.map((p) => {
-        return {
-          ...p._doc,
-          _id: p._id.toString(),
-          createdAt: new Date(p.createdAt).toISOString(),
-          updatedAt: new Date(p.updatedAt).toISOString(),
-        };
+        return convertPost(p);
       }),
       totalPosts,
     };
   },
+
+  post: async ({ id }: any, req: ITokenReq): Promise<IPost | undefined> => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    const post = await Post.findById(id).populate("creator");
+    !post && errorObj("No post found!", 404);
+
+    return post ? convertPost(post) : undefined;
+  },
+};
+
+const convertPost = (post: IPostDoc): IPost => {
+  return {
+    ...post._doc,
+    _id: post._id.toString(),
+    createdAt: new Date(post.createdAt).toISOString(),
+    updatedAt: new Date(post.updatedAt).toISOString(),
+  };
 };
 
 export default resolver;
