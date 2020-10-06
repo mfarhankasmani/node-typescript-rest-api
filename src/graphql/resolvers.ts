@@ -2,10 +2,25 @@ import User, { IUserDoc, IUser } from "../models/user";
 import Post, { IPost, IPostDoc } from "../models/post";
 import bcrypt from "bcryptjs";
 import { validateUserInput, errorObj, validatePostInput } from "../validation";
-import { IUserInputArgs, ILoginInput, IPostInputData, PostData } from "./types";
+import {
+  IUserInputArgs,
+  ILoginInput,
+  ICreatePost,
+  PostData,
+  IUpdatePost,
+} from "./types";
 import { Request } from "express";
 import { ITokenReq } from "../middleware/auth";
 import * as utils from "./utils";
+
+const convertPost = (post: IPostDoc): IPost => {
+  return {
+    ...post._doc,
+    _id: post._id.toString(),
+    createdAt: new Date(post.createdAt).toISOString(),
+    updatedAt: new Date(post.updatedAt).toISOString(),
+  };
+};
 
 const resolver = {
   createUser: async (
@@ -35,7 +50,7 @@ const resolver = {
   },
 
   creatPost: async (
-    { postInput: { title, content, imageUrl } }: IPostInputData,
+    { postInput: { title, content, imageUrl } }: ICreatePost,
     req: ITokenReq
   ) => {
     !req.isAuth && errorObj("Not authenticated", 401);
@@ -81,15 +96,29 @@ const resolver = {
 
     return post ? convertPost(post) : undefined;
   },
-};
 
-const convertPost = (post: IPostDoc): IPost => {
-  return {
-    ...post._doc,
-    _id: post._id.toString(),
-    createdAt: new Date(post.createdAt).toISOString(),
-    updatedAt: new Date(post.updatedAt).toISOString(),
-  };
+  updatePost: async (
+    { postInput: { title, content, imageUrl }, id }: IUpdatePost,
+    req: ITokenReq
+  ): Promise<IPost | undefined> => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    const post = await Post.findById(id).populate("creator");
+    !post && errorObj("No post found!", 404);
+
+    if (post && req.userId) {
+      if (post.creator._id.toString() !== req.userId.toString()) {
+        !req.isAuth && errorObj("Not authenticated", 403);
+      }
+      validatePostInput({ title, content });
+      post.title = title;
+      post.content = content;
+      if (post.imageUrl !== undefined) {
+        post.imageUrl = imageUrl;
+      }
+      const updatedPost = await post.save();
+      return convertPost(updatedPost);
+    }
+  },
 };
 
 export default resolver;

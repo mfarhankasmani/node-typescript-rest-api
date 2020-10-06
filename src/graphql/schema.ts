@@ -68,6 +68,7 @@ const source = new Source(`
     type RootMutation {
         createUser(userInput: UserInputData): User!
         creatPost(postInput: PostInputData): Post!
+        updatePost(id: ID!, postInput: PostInputData): Post!
     }
 
     schema {

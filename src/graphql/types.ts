@@ -12,7 +12,7 @@ export interface ILoginInput {
   password: string;
 }
 
-export interface IPostInputData {
+export interface ICreatePost {
   postInput: IPostInput;
 }
 
@@ -31,4 +31,9 @@ export interface IFindUser {
 export interface PostData {
   posts: IPost[];
   totalPosts: number;
+}
+
+export interface IUpdatePost {
+    id: string,
+    postInput: IPostInput
 }
