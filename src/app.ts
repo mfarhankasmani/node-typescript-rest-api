@@ -7,8 +7,9 @@ import { graphqlHTTP } from "express-graphql";
 
 import resolvers from "./graphql/resolvers";
 import schema from "./graphql/schema";
-import { IError } from "./validation";
-import auth from "./middleware/auth";
+import { errorObj, IError } from "./validation";
+import auth, { ITokenReq } from "./middleware/auth";
+import { clearImage } from "./graphql/utils";
 
 export const CLIENT_SECRET = "SECRETFORUI";
 
@@ -61,6 +62,20 @@ app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 app.use("/src/images", express.static(path.join(__dirname, "images")));
 
 app.use(auth);
+
+app.put("/post-image", (req: ITokenReq, res, next) => {
+  !req.isAuth && errorObj("Not authenticated", 401);
+  if (!req.file) {
+    return res.status(200).json({ message: "No file provided!" });
+  }
+  if (req.body.oldPath) {
+    clearImage(req.body.oldPath);
+  }
+  return res
+    .status(201)
+    .json({ message: "File stored.", filePath: req.file.path });
+});
+
 
 // add graphQL middleware - one route for all the routes
 app.use(

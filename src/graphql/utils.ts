@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 import User, { IUserDoc } from "../models/user";
 import { errorObj } from "../validation";
 import { IFindUser } from "./types";
@@ -49,4 +52,9 @@ export const gqlPost = (post: IPostDoc) => {
     createdAt: new Date(post.createdAt).toISOString(),
     updatedAt: new Date(post.updatedAt).toISOString(),
   };
+};
+
+export const clearImage = (filePath: string) => {
+  filePath = path.join(__dirname, "../../", filePath);
+  fs.unlink(filePath, (err) => console.log(err));
 };
