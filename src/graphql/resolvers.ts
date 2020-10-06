@@ -2,63 +2,10 @@ import User, { IUserDoc, IUser } from "../models/user";
 import Post, { IPost, IPostDoc } from "../models/post";
 import bcrypt from "bcryptjs";
 import { validateUserInput, errorObj, validatePostInput } from "../validation";
-import jwt from "jsonwebtoken";
-import { CLIENT_SECRET } from "../app";
-
-import {
-  IUserInputArgs,
-  ILoginInput,
-  IPostInputData,
-  IFindUser,
-} from "./types";
+import { IUserInputArgs, ILoginInput, IPostInputData, PostData } from "./types";
 import { Request } from "express";
 import { ITokenReq } from "../middleware/auth";
-
-const findUser = async ({
-  existingUser = false,
-  email,
-  id,
-}: IFindUser): Promise<IUserDoc | null> => {
-  let user;
-
-  if (email) {
-    user = await User.findOne({ email });
-  } else if (id) {
-    user = await User.findById(id);
-  } else {
-    return null;
-  }
-
-  if (existingUser && user) {
-    errorObj("User exists already", 404);
-  }
-
-  if (!existingUser && !user) {
-    errorObj("Invalid User", 401);
-  }
-
-  return user;
-};
-
-const createToken = (user: IUserDoc): string => {
-  return jwt.sign(
-    {
-      userId: user._id.toString(),
-      email: user.email,
-    },
-    CLIENT_SECRET,
-    { expiresIn: "1h" }
-  );
-};
-
-const gqlPost = (post: IPostDoc) => {
-  return {
-    ...post._doc,
-    _id: post._id.toString(),
-    createdAt: post.createdAt.toISOString(),
-    updatedAt: post.updatedAt.toISOString(),
-  };
-};
+import * as utils from "./utils";
 
 const resolver = {
   createUser: async (
@@ -66,7 +13,7 @@ const resolver = {
     req: Request
   ) => {
     validateUserInput({ email, password });
-    await findUser({ existingUser: true, email });
+    await utils.findUser({ existingUser: true, email });
     const hashedPw = await bcrypt.hash(password, 12);
     const user: IUserDoc = new User({
       email,
@@ -78,11 +25,11 @@ const resolver = {
   },
 
   login: async ({ email, password }: ILoginInput) => {
-    const user = await findUser({ email });
+    const user = await utils.findUser({ email });
     if (user) {
       const isEqual = await bcrypt.compare(password, user.password);
       !isEqual && errorObj("Password is incorrect.", 401);
-      const token = createToken(user);
+      const token = utils.createToken(user);
       return { token, userId: user._id.toString() };
     }
   },
@@ -93,7 +40,7 @@ const resolver = {
   ) => {
     !req.isAuth && errorObj("Not authenticated", 401);
     validatePostInput({ title, content });
-    const user = await findUser({ id: req.userId });
+    const user = await utils.findUser({ id: req.userId });
     if (user) {
       const post = new Post({
         title,
@@ -103,9 +50,27 @@ const resolver = {
       } as IPost);
       const createdPost = await post.save();
       user.posts.push(createdPost);
-      await user.save()
-      return gqlPost(createdPost);
+      await user.save();
+      return utils.gqlPost(createdPost);
     }
+  },
+
+  posts: async (args: any, req: ITokenReq): Promise<PostData> => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    const totalPosts = await Post.find().countDocuments();
+    const posts = await Post.find().sort({ createdAt: -1 }).populate("creator");
+
+    return {
+      posts: posts.map((p) => {
+        return {
+          ...p._doc,
+          _id: p._id.toString(),
+          createdAt: new Date(p.createdAt).toISOString(),
+          updatedAt: new Date(p.updatedAt).toISOString(),
+        };
+      }),
+      totalPosts,
+    };
   },
 };
 

@@ -1,3 +1,5 @@
+import { IPost } from "../models/post";
+
 export interface IUserInputArgs {
   userInput: IUserInput;
 }
@@ -24,4 +26,9 @@ export interface IFindUser {
   existingUser?: boolean;
   email?: string;
   id?: string;
+}
+
+export interface PostData {
+  posts: IPost[];
+  totalPosts: number;
 }

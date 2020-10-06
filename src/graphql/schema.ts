@@ -25,7 +25,7 @@ const source = new Source(`
         imageUrl: String!
         creator: User!
         createdAt: String!
-        updateAt: String!
+        updateAt: String
     }
 
     type User {
@@ -42,6 +42,11 @@ const source = new Source(`
         userId: String!
     }
 
+    type PostData {
+        posts: [Post!]!
+        totalPosts: Int!
+    }
+
     input UserInputData {
         email: String!
         name: String!
@@ -56,6 +61,7 @@ const source = new Source(`
 
     type RootQuery {
         login(email: String!, password: String!): AuthData!
+        posts: PostData!
     }
 
     type RootMutation {

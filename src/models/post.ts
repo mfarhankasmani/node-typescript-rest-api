@@ -6,8 +6,8 @@ export interface IPostDoc extends Document {
   content: string;
   imageUrl: string;
   creator: IUserDoc["_id"];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
   _doc: IPost;
 }
 
