@@ -55,10 +55,16 @@ const resolver = {
     }
   },
 
-  posts: async (args: any, req: ITokenReq): Promise<PostData> => {
+  posts: async ({ page = 1 }, req: ITokenReq): Promise<PostData> => {
     !req.isAuth && errorObj("Not authenticated", 401);
     const totalPosts = await Post.find().countDocuments();
-    const posts = await Post.find().sort({ createdAt: -1 }).populate("creator");
+    
+    const perPage = 2;
+    const posts = await Post.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * perPage)
+      .limit(perPage)
+      .populate("creator");
 
     return {
       posts: posts.map((p) => {
