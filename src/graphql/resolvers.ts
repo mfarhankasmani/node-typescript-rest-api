@@ -119,6 +119,47 @@ const resolver = {
       return convertPost(updatedPost);
     }
   },
+
+  deletePost: async ({ id }: any, req: ITokenReq): Promise<boolean> => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    const post = await Post.findById(id);
+    !post && errorObj("No post found!", 404);
+    if (post && req.userId) {
+      if (post.creator.toString() !== req.userId.toString()) {
+        !req.isAuth && errorObj("Not authenticated", 403);
+      }
+      utils.clearImage(post.imageUrl);
+      await Post.findByIdAndRemove(id);
+      const user = (await User.findById(req.userId)) as IUserDoc;
+      user.posts.pull(id);
+      await user.save();
+      return true;
+    }
+    return false;
+  },
+
+  user: async ({}, req: ITokenReq): Promise<IUser | undefined> => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    if (req.userId) {
+      const user = (await User.findById(req.userId)) as IUserDoc;
+      !user && errorObj("No user found!", 404);
+      return { ...user._doc, _id: user._id.toString() };
+    }
+  },
+
+  updateStatus: async (
+    { status }: any,
+    req: ITokenReq
+  ): Promise<IUser | undefined> => {
+    !req.isAuth && errorObj("Not authenticated", 401);
+    if (req.userId) {
+      const user = (await User.findById(req.userId)) as IUserDoc;
+      !user && errorObj("No user found!", 404);
+      user.status = status;
+      await user.save();
+      return { ...user._doc, _id: user._id.toString() };
+    }
+  },
 };
 
 export default resolver;
